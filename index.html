@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="聊天">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;font-size:14px;-webkit-text-size-adjust:100%}
+img{max-width:100%}[hidden]{display:none!important}
+</style>
+<title>拍攝用聊天道具</title>
+<style>
+/* Layout: full-height phone chat screen (header / scrolling thread / composer) + slide-up script editor overlay. Deliberately light-only: it is an on-camera prop. */
+:root{
+  --bg:#ffffff; --fg:#111114; --muted:#8a8a93; --line:#ececf0;
+  --bubble-them:#efeff3; --me-a:#7b3cf0; --me-b:#c43ad9;
+  --ed-bg:#f6f5fa; --ed-card:#ffffff; --ed-accent:#6d3ae6; --danger:#d93a4b;
+  --font:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;background:var(--bg)}
+.status{display:flex;justify-content:space-between;align-items:center;padding:10px max(26px,env(safe-area-inset-right,0px)) 4px max(34px,env(safe-area-inset-left,0px));font-weight:600;font-size:16px}
+.status svg{height:13px}
+.head{display:flex;align-items:center;gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) 10px max(8px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);user-select:none;-webkit-user-select:none}
+.head .ico{width:40px;height:40px;display:grid;place-items:center;flex:none}
+.head .ico svg{width:26px;height:26px}
+.who{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.who .nm{font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .hd{color:var(--muted);font-size:13px}
+.av{border-radius:50%;object-fit:cover;flex:none;background:linear-gradient(135deg,#f0c27b,#c4733b);display:grid;place-items:center;color:#fff;font-weight:700;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.thread{flex:1;overflow-y:auto;padding:8px max(14px,env(safe-area-inset-right,0px)) 12px max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.div{align-self:center;color:var(--muted);font-size:12.5px;padding:12px 0 6px}
+.row{display:flex;align-items:flex-end;gap:8px;max-width:100%}
+.row.me{justify-content:flex-end}
+.bub{padding:9px 14px;border-radius:20px;font-size:16px;line-height:1.4;max-width:min(76%,380px);word-break:break-word;white-space:pre-wrap}
+.them .bub{background:var(--bubble-them);color:var(--fg)}
+.me .bub{background:linear-gradient(90deg,var(--me-a),var(--me-b));background-attachment:fixed;color:#fff}
+.me + .me .bub{border-top-right-radius:8px}
+.bub.heart{padding:8px 16px}
+.bub.heart svg{width:22px;height:22px;display:block}
+.me .bub.heart svg{stroke:#fff}
+.reply{display:flex;flex-direction:column;gap:4px;max-width:76%}
+.reply .cap{font-size:12px;color:var(--muted);padding-left:4px}
+.reply .pic{border-left:3px solid #d4d4da;padding-left:8px}
+.reply .pic img{width:130px;aspect-ratio:9/13;object-fit:cover;border-radius:14px;display:block}
+.me .reply{align-items:flex-end}
+.me .reply .pic{border-left:0;border-right:3px solid #d4d4da;padding:0 8px 0 0}
+.typing{display:flex;gap:4px;padding:13px 14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#9a9aa3;animation:bl 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.3}40%{opacity:1}}
+.pop{animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.pop,.typing i{animation:none}}
+.composer{padding:8px max(12px,env(safe-area-inset-right,0px)) 10px max(12px,env(safe-area-inset-left,0px))}
+.field{display:flex;align-items:center;gap:6px;background:#efeff3;border-radius:28px;padding:5px 8px 5px 5px}
+.cam{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--me-a),var(--me-b));display:grid;place-items:center;flex:none}
+.cam svg{width:20px;height:20px}
+#msg{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;padding:8px 4px;outline:none;color:var(--fg)}
+#msg::placeholder{color:var(--muted)}
+.tools{display:flex;gap:2px}
+.tools button{width:36px;height:36px;display:grid;place-items:center}
+.tools svg{width:24px;height:24px}
+#send{color:var(--me-a);font-weight:700;padding:0 10px;height:36px}
+/* editor */
+.ed{position:fixed;inset:0;background:var(--ed-bg);z-index:50;display:flex;flex-direction:column;color:#1c1b22}
+.ed-top{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));background:var(--ed-card);border-bottom:1px solid var(--line)}
+.ed-top h1{font-size:17px;margin:0}
+.btn{padding:8px 14px;border-radius:10px;background:#ebe7f7;color:var(--ed-accent);font-weight:600;font-size:14px}
+.btn.pri{background:var(--ed-accent);color:#fff}
+.btn.warn{background:#fbe9eb;color:var(--danger)}
+.ed-body{flex:1;overflow-y:auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+.sec h2{font-size:12px;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.card{background:var(--ed-card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.fr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fr label{font-size:14px;min-width:64px;color:#55535f}
+.in{flex:1;min-width:0;border:1px solid #dddbe6;border-radius:9px;padding:8px 10px;font:inherit;font-size:15px;background:#fff;color:#1c1b22}
+.in:focus,.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--ed-accent);outline-offset:1px}
+textarea.in{resize:vertical;min-height:40px}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.5}
+.msgs{display:flex;flex-direction:column;gap:8px}
+.mi{background:var(--ed-card);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;border-left:4px solid transparent}
+.mi.me{border-left-color:var(--me-b)}.mi.them{border-left-color:#b9b8c4}.mi.divider{border-left-color:#e2e1e8;background:#fbfbfd}
+.mi.cue{outline:1.5px dashed #e3a33a}
+.seg{display:inline-flex;background:#efedf5;border-radius:9px;padding:2px}
+.seg button{padding:5px 10px;border-radius:7px;font-size:13px;color:#55535f}
+.seg button.on{background:#fff;color:var(--ed-accent);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.mi .ctl{display:flex;gap:4px;margin-left:auto}
+.mi .ctl button{width:32px;height:32px;border-radius:8px;background:#f2f1f6;display:grid;place-items:center;font-size:14px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:#7a5a1e}
+.thumb{width:48px;height:64px;object-fit:cover;border-radius:8px;background:#eee}
+.adds{display:flex;gap:8px;flex-wrap:wrap}
+
+.filebtn{position:relative;overflow:hidden;display:inline-block}
+.filebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:100px}
+#io{font-family:ui-monospace,Menlo,monospace;font-size:12px;min-height:90px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:rgba(20,20,25,.86);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;z-index:80;pointer-events:none}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <div class="status" id="status" hidden>
+    <span id="clock">14:00</span>
+    <svg viewBox="0 0 70 13" fill="#111"><rect x="0" y="9" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="13" rx="1"/><path d="M27 4.5a10 10 0 0 1 14 0l-1.6 1.6a7.7 7.7 0 0 0-10.8 0zM30.2 7.7a5.4 5.4 0 0 1 7.6 0L34 11.5z"/><rect x="46" y="1" width="21" height="11" rx="3" fill="none" stroke="#111" stroke-width="1.3"/><rect x="48" y="3" width="17" height="7" rx="1.5"/><rect x="68" y="4.5" width="1.6" height="4" rx=".8"/></svg>
+  </div>
+  <div class="head">
+    <button class="ico" aria-label="返回"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="who" id="who" title="長按 1 秒進入編輯模式">
+      <div class="av" id="hAv" style="width:44px;height:44px"></div>
+      <div style="min-width:0"><div class="nm" id="hName"></div><div class="hd" id="hHandle"></div></div>
+    </div>
+    <button class="ico" aria-label="通話"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linejoin="round"><path d="M5 3.5h3.2l1.6 4.3-2.1 1.5a12 12 0 0 0 7 7l1.5-2.1 4.3 1.6V19a1.8 1.8 0 0 1-2 1.8C10.2 20.3 3.7 13.8 3.2 5.5A1.8 1.8 0 0 1 5 3.5z"/></svg></button>
+    <button class="ico" aria-label="視訊"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linejoin="round"><rect x="2.5" y="6" width="13.5" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></button>
+    <button class="ico" aria-label="資訊"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7"><circle cx="12" cy="12" r="9.3"/><path d="M12 10.5v6M12 7.2v.4" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="thread" id="thread"></div>
+  <form class="composer" id="composer" autocomplete="off">
+    <div class="field">
+      <div class="cam"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="4"/><circle cx="12" cy="13" r="3.3"/><path d="M9 6l1.2-2h3.6L15 6"/></svg></div>
+      <input id="msg" placeholder="傳送訊息…" enterkeyhint="send">
+      <div class="tools" id="tools">
+        <button type="button" aria-label="語音"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
+        <button type="button" aria-label="相片"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="9.5" r="1.7"/><path d="M3.5 17l5-5 4 4 2.5-2.5L20.5 19"/></svg></button>
+        <button type="button" aria-label="貼圖"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linejoin="round"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v6l-7 7H7a3 3 0 0 1-3-3z"/><path d="M13 20v-4a3 3 0 0 1 3-3h4"/><circle cx="9" cy="10" r=".6" fill="#111"/><circle cx="14" cy="10" r=".6" fill="#111"/></svg></button>
+      </div>
+      <button type="submit" id="send" hidden>傳送</button>
+    </div>
+  </form>
+</div>
+
+<div class="ed" id="ed" hidden>
+  <div class="ed-top"><h1>編輯對話</h1><button class="btn pri" id="done">完成，回到畫面</button></div>
+  <div class="ed-body">
+    <div class="sec"><h2>對方資料</h2>
+      <div class="card">
+        <div class="fr"><label for="fName">名稱</label><input class="in" id="fName"></div>
+        <div class="fr"><label for="fHandle">帳號</label><input class="in" id="fHandle"></div>
+        <div class="fr"><label>大頭貼</label><div class="av" id="eAv" style="width:48px;height:48px"></div>
+          <span class="btn filebtn">上傳照片<input type="file" id="fAv" accept="image/*" aria-label="上傳大頭貼"></span>
+          <button class="btn warn" id="clrAv" type="button">移除</button></div>
+      </div>
+    </div>
+    <div class="sec"><h2>拍攝設定</h2>
+      <div class="card">
+        <div class="fr"><label for="fStatus">狀態列</label><input type="checkbox" id="fStatus"><span class="hint">顯示假的時間／訊號列（手機本身已有狀態列時可關閉）</span></div>
+        <div class="fr"><label for="fClock">時間</label><input class="in" id="fClock" style="max-width:110px"></div>
+        <div class="fr"><label for="fAuto">自動回覆</label><input type="checkbox" id="fAuto">
+          <span class="hint">演員送出訊息後，下一則「待觸發」訊息在</span>
+          <input class="in" id="fDelay" type="number" min="0" step="0.5" style="max-width:70px"><span class="hint">秒後出現（先顯示輸入中…）</span></div>
+        <div class="fr"><label>全螢幕</label><button class="btn pri" id="fs" type="button">進入全螢幕</button><span class="hint">Android Chrome 可用；iPhone 請用「加入主畫面」</span></div>
+        <p class="hint" style="margin:0">「待觸發」訊息一開始不會出現。拍攝時連點兩下聊天區空白處，也能手動叫出下一則。長按標題名稱 1 秒回到這裡。</p>
+      </div>
+    </div>
+    <div class="sec"><h2>對話腳本（由上到下）</h2>
+      <div class="msgs" id="list"></div>
+      <div class="adds" style="margin-top:10px">
+        <button class="btn" data-add="them">＋ 對方訊息</button>
+        <button class="btn" data-add="me">＋ 我的訊息</button>
+        <button class="btn" data-add="divider">＋ 時間標籤</button>
+      </div>
+    </div>
+    <div class="sec"><h2>重置與備份</h2>
+      <div class="card">
+        <div class="adds">
+          <button class="btn" id="resetLive">清除拍攝時打的字，回到腳本</button>
+          <button class="btn warn" id="resetAll">恢復範例腳本</button>
+        </div>
+        <textarea class="in" id="io" placeholder="按「匯出」產生腳本代碼；貼上代碼後按「匯入」"></textarea>
+        <div class="adds"><button class="btn" id="exp">匯出</button><button class="btn" id="imp">匯入</button></div>
+        <div id="resetConfirm" class="fr" hidden><span class="hint" style="color:var(--danger)">會覆蓋目前腳本與照片，確定嗎？</span><button class="btn warn" id="resetYes">確定恢復</button><button class="btn" id="resetNo">取消</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const KEY='chatprop-v1';
+const storyPh='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 130"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd3e0"/><stop offset="1" stop-color="#c8b6ff"/></linearGradient></defs><rect width="90" height="130" fill="url(#g)"/><text x="45" y="70" font-size="11" text-anchor="middle" fill="#6b4e8a" font-family="sans-serif">限時動態照片</text></svg>');
+let uid=1;const nid=()=>'m'+Date.now().toString(36)+(uid++);
+function sample(){return{
+  contact:{name:'光 Gwang',handle:'gwang',avatar:''},
+  clock:'14:00',status:false,auto:true,delay:2,
+  messages:[
+    {from:'sys',type:'divider',text:'2 天前'},
+    {from:'me',type:'text',text:'什麼時候可以碰面'},
+    {from:'them',type:'text',text:'再看看吧'},
+    {from:'me',type:'text',text:'公在做什麼'},
+    {from:'them',type:'text',text:'要睡了'},
+    {from:'me',type:'text',text:'老公晚安'},
+    {from:'them',type:'heart',text:''},
+    {from:'sys',type:'divider',text:'1 天前'},
+    {from:'me',type:'text',text:'公～你老婆現在在往台北的車上了！\n終於可以見面了♡♡♡'},
+    {from:'me',type:'text',text:'人呢人呢'},
+    {from:'me',type:'text',text:'已讀不回是怎樣！！'},
+    {from:'me',type:'text',text:'跑去約會了是不是！！！'},
+    {from:'sys',type:'divider',text:'現在'},
+    {from:'them',type:'image',text:'寶寶好可愛……',caption:'回覆了你的限時動態',img:''},
+    {from:'me',type:'text',text:'你終於回了，到底在幹嘛？'},
+    {from:'me',type:'text',text:'跟別的女生約會嗎？'},
+    {from:'them',type:'text',text:'其實我在台北車站附近了，約東三門外好嗎？',cue:true}
+  ].map(m=>({id:nid(),cue:false,caption:'',img:'',...m}))}}
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.messages)S=sample();
+let live=[];          // messages typed during the take
+let shown=new Map();  // cued id -> display order
+let seq=1e6;
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('照片太大，無法儲存，請換小一點的圖')}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const heartSvg='<svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/></svg>';
+function avHtml(){const c=S.contact;return c.avatar?`<img src="${c.avatar}" alt="">`:esc((c.name||'?').trim().charAt(0))}
+function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,1800)}
+
+function ordOf(m){return m.ord??(m.cue?shown.get(m.id):S.messages.indexOf(m))}
+function visible(){return [...S.messages.filter(m=>!m.cue||shown.has(m.id)),...live].sort((a,b)=>ordOf(a)-ordOf(b))}
+function msgHtml(m,anim){
+  if(m.type==='divider')return `<div class="div">${esc(m.text)}</div>`;
+  const side=m.from==='me'?'me':'them';
+  const av=side==='them'?`<div class="av" style="width:36px;height:36px;font-size:14px">${avHtml()}</div>`:'';
+  let body;
+  if(m.type==='heart')body=`<div class="bub heart">${heartSvg}</div>`;
+  else if(m.type==='image')body=`<div class="reply">${m.caption?`<div class="cap">${esc(m.caption)}</div>`:''}<div class="pic"><img src="${m.img||storyPh}" alt=""></div>${m.text?`<div class="bub">${esc(m.text)}</div>`:''}</div>`;
+  else body=`<div class="bub">${esc(m.text)}</div>`;
+  return `<div class="row ${side}${anim?' pop':''}">${side==='them'?av+body:body}</div>`;
+}
+let lastIds=new Set();
+function render(){
+  $('hName').textContent=S.contact.name;$('hHandle').textContent=S.contact.handle;$('hAv').innerHTML=avHtml();
+  $('status').hidden=!S.status;$('clock').textContent=S.clock;
+  const v=visible();
+  $('thread').innerHTML=v.map(m=>msgHtml(m,lastIds.size&&!lastIds.has(m.id))).join('')+(typing?`<div class="row them pop"><div class="av" style="width:36px;height:36px;font-size:14px">${avHtml()}</div><div class="bub typing" style="background:var(--bubble-them)"><i></i><i></i><i></i></div></div>`:'');
+  lastIds=new Set(v.map(m=>m.id));
+  $('thread').scrollTop=1e9;
+}
+let typing=false,cueTimer;
+function nextCue(){return S.messages.find(m=>m.cue&&!shown.has(m.id))}
+function reveal(withTyping){
+  const m=nextCue();if(!m)return;
+  if(!withTyping){shown.set(m.id,seq++);render();return}
+  typing=true;render();
+  cueTimer=setTimeout(()=>{typing=false;shown.set(m.id,seq++);render()},Math.max(.3,+S.delay||0)*1000);
+}
+// composer
+const msg=$('msg');
+msg.addEventListener('input',()=>{const has=msg.value.trim()!=='';$('send').hidden=!has;$('tools').hidden=has});
+$('composer').addEventListener('submit',e=>{e.preventDefault();const t=msg.value.trim();if(!t)return;
+  live.push({id:nid(),from:'me',type:'text',text:t,ord:seq++});
+  msg.value='';msg.dispatchEvent(new Event('input'));render();
+  if(S.auto&&nextCue()&&!typing){clearTimeout(cueTimer);setTimeout(()=>reveal(true),500)}
+});
+// double-tap empty chat area = reveal next cue
+let lastTap=0;
+$('thread').addEventListener('click',e=>{if(e.target.closest('.bub,.pic'))return;const n=Date.now();if(n-lastTap<350){reveal(false);lastTap=0}else lastTap=n});
+// long-press header name = editor
+let lp;const who=$('who');
+const lpStart=()=>{lp=setTimeout(openEd,900)};const lpEnd=()=>clearTimeout(lp);
+['touchstart','mousedown'].forEach(ev=>who.addEventListener(ev,lpStart,{passive:true}));
+['touchend','touchmove','mouseup','mouseleave'].forEach(ev=>who.addEventListener(ev,lpEnd));
+who.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- editor ----------
+function openEd(){fillEd();$('ed').hidden=false}
+$('fs').onclick=()=>{const el=document.documentElement;const fn=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!fn){toast('這個瀏覽器不支援全螢幕，請改用「加入主畫面」');return}
+  try{Promise.resolve(fn.call(el,{navigationUI:'hide'})).then(()=>{$('ed').hidden=true;lastIds=new Set();render()},()=>toast('全螢幕被擋下，請改用「加入主畫面」'))}catch(e){toast('全螢幕被擋下，請改用「加入主畫面」')}};
+$('done').onclick=()=>{$('ed').hidden=true;lastIds=new Set();render()};
+function fillEd(){
+  $('fName').value=S.contact.name;$('fHandle').value=S.contact.handle;$('eAv').innerHTML=avHtml();
+  $('fStatus').checked=S.status;$('fClock').value=S.clock;$('fAuto').checked=S.auto;$('fDelay').value=S.delay;
+  renderList();
+}
+$('fName').oninput=e=>{S.contact.name=e.target.value;save();$('eAv').innerHTML=avHtml()};
+$('fHandle').oninput=e=>{S.contact.handle=e.target.value;save()};
+$('fStatus').onchange=e=>{S.status=e.target.checked;save()};
+$('fClock').oninput=e=>{S.clock=e.target.value;save()};
+$('fAuto').onchange=e=>{S.auto=e.target.checked;save()};
+$('fDelay').oninput=e=>{S.delay=+e.target.value||0;save()};
+function readImg(file,max,cb){
+  toast('讀取照片中…');
+  const url=URL.createObjectURL(file);const im=new Image();
+  im.onload=()=>{try{const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.85);URL.revokeObjectURL(url);toast('照片已更新');cb(d)}catch(e){toast('照片處理失敗，請換一張試試')}};
+  im.onerror=()=>{URL.revokeObjectURL(url);toast('這張照片的格式讀不了（例如 HEIC），請改用 JPG 或 PNG')};
+  im.src=url}
+$('fAv').onchange=e=>{const f=e.target.files[0];if(f)readImg(f,300,d=>{S.contact.avatar=d;save();$('eAv').innerHTML=avHtml()});e.target.value=''};
+$('clrAv').onclick=()=>{S.contact.avatar='';save();$('eAv').innerHTML=avHtml()};
+
+function renderList(){
+  $('list').innerHTML=S.messages.map((m,i)=>{
+    const isDiv=m.type==='divider';
+    return `<div class="mi ${isDiv?'divider':m.from}${m.cue?' cue':''}" data-i="${i}">
+      <div class="fr">
+        ${isDiv?'<span class="hint" style="font-weight:600">時間標籤</span>':`
+        <div class="seg" data-k="from">${[['them','對方'],['me','我']].map(([v,l])=>`<button type="button" data-v="${v}" class="${m.from===v?'on':''}">${l}</button>`).join('')}</div>
+        <div class="seg" data-k="type">${[['text','文字'],['heart','愛心'],['image','限動回覆']].map(([v,l])=>`<button type="button" data-v="${v}" class="${m.type===v?'on':''}">${l}</button>`).join('')}</div>`}
+        <div class="ctl"><button type="button" data-act="up" aria-label="上移">↑</button><button type="button" data-act="down" aria-label="下移">↓</button><button type="button" data-act="del" aria-label="刪除" style="color:var(--danger)">✕</button></div>
+      </div>
+      ${m.type==='heart'?'':`<textarea class="in" rows="1" data-k="text" placeholder="${isDiv?'例如：現在、昨天 22:14':'訊息內容'}">${esc(m.text)}</textarea>`}
+      ${m.type==='image'?`<div class="fr"><img class="thumb" src="${m.img||storyPh}" alt=""><div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0">
+        <input class="in" data-k="caption" value="${esc(m.caption)}" placeholder="上方小字，如：回覆了你的限時動態">
+        <div class="adds"><span class="btn filebtn">換照片<input type="file" accept="image/*" id="up${m.id}" data-img aria-label="換照片"></span></div></div></div>`:''}
+      ${isDiv?'':`<label class="chk"><input type="checkbox" data-k="cue" ${m.cue?'checked':''}>待觸發（拍攝時才出現）</label>`}
+    </div>`}).join('');
+}
+$('list').addEventListener('input',e=>{const mi=e.target.closest('.mi');const k=e.target.dataset.k;if(!mi||!k||k==='cue')return;S.messages[+mi.dataset.i][k]=e.target.value;save()});
+$('list').addEventListener('change',e=>{const mi=e.target.closest('.mi');if(!mi)return;const m=S.messages[+mi.dataset.i];
+  if(e.target.dataset.k==='cue'){m.cue=e.target.checked;shown.delete(m.id);save();mi.classList.toggle('cue',m.cue)}
+  if(e.target.hasAttribute('data-img')){const f=e.target.files[0];if(f)readImg(f,700,d=>{m.img=d;save();renderList()})}});
+$('list').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const mi=b.closest('.mi');const i=+mi.dataset.i;const m=S.messages[i];
+  const seg=b.closest('.seg');
+  if(seg){m[seg.dataset.k]=b.dataset.v;save();renderList();return}
+  const a=b.dataset.act,L=S.messages;
+  if(a==='up'&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];
+  if(a==='down'&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
+  if(a==='del')L.splice(i,1);
+  save();renderList();});
+document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const t=b.dataset.add;
+  S.messages.push({id:nid(),from:t==='divider'?'sys':t,type:t==='divider'?'divider':'text',text:t==='divider'?'現在':'',caption:'',img:'',cue:false});
+  save();renderList();const last=$('list').lastElementChild;last.scrollIntoView({block:'center'});last.querySelector('textarea')?.focus()});
+$('resetLive').onclick=()=>{live=[];shown=new Map();typing=false;clearTimeout(cueTimer);toast('已回到腳本起始畫面')};
+$('resetAll').onclick=()=>{$('resetConfirm').hidden=false};
+$('resetNo').onclick=()=>{$('resetConfirm').hidden=true};
+$('resetYes').onclick=()=>{S=sample();live=[];shown=new Map();save();fillEd();$('resetConfirm').hidden=true;toast('已恢復範例腳本')};
+$('exp').onclick=()=>{$('io').value=JSON.stringify(S);$('io').select();try{navigator.clipboard.writeText($('io').value).then(()=>toast('已複製腳本代碼'),()=>toast('已產生，請手動複製'))}catch(e){toast('已產生，請手動複製')}};
+$('imp').onclick=()=>{try{const d=JSON.parse($('io').value);if(!d.messages)throw 0;S=d;save();live=[];shown=new Map();fillEd();toast('已匯入腳本')}catch(e){toast('代碼格式不正確，請貼上完整的匯出內容')}};
+
+render();
+</script>
+
+</body>
+</html>
